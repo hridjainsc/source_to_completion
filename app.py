@@ -85,6 +85,41 @@ roll = (
 
 st.title("📊 Source Completion Dashboard")
 
+# ---------- SOURCE CONTRIBUTION ----------
+st.subheader("🚦 Source Entry Contribution")
+st.caption("Share of total users starting from each source within the selected filters.")
+
+source_contrib = (
+    df_f.groupby("source")["total_user_series"]
+    .sum()
+    .sort_values(ascending=False)
+)
+
+total_users = source_contrib.sum()
+source_contrib_pct = (source_contrib / total_users).reset_index()
+source_contrib_pct.columns = ["source", "share"]
+
+# Show top contributors as metrics
+top_sources = source_contrib_pct.head(5)
+
+metric_cols = st.columns(len(top_sources))
+for i, row in top_sources.iterrows():
+    metric_cols[list(top_sources.index).index(i)].metric(
+        row["source"],
+        f"{row['share']:.1%}"
+    )
+
+# Bar chart
+fig_contrib = px.bar(
+    source_contrib_pct,
+    x="source",
+    y="share",
+    title="Source share of total starts"
+)
+st.plotly_chart(fig_contrib, use_container_width=True)
+
+st.divider()
+
 # ---------- KPI ----------
 st.subheader("Key Metrics")
 st.caption("Average completion performance across the selected period and filters.")
