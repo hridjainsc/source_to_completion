@@ -86,6 +86,9 @@ roll = (
 st.title("📊 Source Completion Dashboard")
 
 # ---------- KPI ----------
+st.subheader("Key Metrics")
+st.caption("Average completion performance across the selected period and filters.")
+
 kpi_cols = st.columns(len(cols))
 for i, c in enumerate(cols):
     val = daily[c].mean()
@@ -97,6 +100,9 @@ for i, c in enumerate(cols):
 st.divider()
 
 # ---------- TIME SERIES ----------
+st.subheader("Trend Over Time")
+st.caption("Shows how the selected completion metric evolves daily (rolling average applied).")
+
 metric_select = st.selectbox("Metric", cols)
 
 fig = px.line(
@@ -110,6 +116,8 @@ st.plotly_chart(fig, use_container_width=True)
 
 # ---------- FUNNEL ----------
 st.subheader("🎯 Funnel View")
+st.caption("Shows average progression of users through episode milestones.")
+
 funnel_vals = daily[cols].mean().values
 funnel_labels = [c.replace("_users","") for c in cols]
 
@@ -118,6 +126,7 @@ st.plotly_chart(fig_funnel, use_container_width=True)
 
 # ---------- DROP-OFF ----------
 st.subheader("📉 Step Conversion / Drop-off")
+st.caption("Conversion rate between consecutive milestones and the percentage of users lost.")
 
 drop_df = pd.DataFrame({
     "step": funnel_labels[:-1],
@@ -133,6 +142,7 @@ st.dataframe(drop_df.style.format({
 
 # ---------- COHORT ----------
 st.subheader("📅 Cohort Table")
+st.caption("Average completion rates per source — useful to compare long-term quality of traffic.")
 
 cohort = (
     daily.groupby("source")[cols]
@@ -143,11 +153,10 @@ st.dataframe(cohort, use_container_width=True)
 
 # ---------- STACKED CONTRIBUTION ----------
 st.subheader("📊 Source Contribution Over Time")
+st.caption("Shows how much each milestone contributes relative to total completions per day.")
 
 stack = daily.groupby("date")[cols].sum()
 stack_share = stack.div(stack.sum(axis=1), axis=0).reset_index()
-
-stack_melt = stack_share.melt(id_vars="date", var_name="metric", value_name="share")
 
 metric_stack = st.selectbox("Metric for contribution", cols, key="stack")
 
@@ -161,10 +170,10 @@ st.plotly_chart(fig_stack, use_container_width=True)
 
 # ---------- INSIGHTS ----------
 st.subheader("🤖 Automatic Insights")
+st.caption("Highlights statistically notable movements and anomalies.")
 
 insights = []
 
-# Top mover (last 7 vs previous 7)
 latest = daily[daily["date"] >= daily["date"].max() - pd.Timedelta(days=7)]
 prev = daily[
     (daily["date"] < daily["date"].max() - pd.Timedelta(days=7)) &
@@ -178,13 +187,9 @@ if len(prev) > 0:
     ).dropna()
 
     if len(change) > 0:
-        top_up = change.idxmax()
-        top_down = change.idxmin()
+        insights.append(f"📈 Biggest improvement: **{change.idxmax()}**")
+        insights.append(f"📉 Biggest drop: **{change.idxmin()}**")
 
-        insights.append(f"📈 Biggest improvement: **{top_up}**")
-        insights.append(f"📉 Biggest drop: **{top_down}**")
-
-# Anomaly detection (z-score)
 series = daily.groupby("date")[metric_select].mean()
 z = (series - series.mean()) / series.std()
 
